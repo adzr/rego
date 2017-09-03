@@ -23,20 +23,34 @@ import (
 
 // Git is a context structure for a git command.
 type Git struct {
+	// WorkDir is the working directory where the command is being executed.
 	WorkDir string
+	// Verbose shows more verbose output while execution.
 	Verbose bool
+}
+
+func (g *Git) withGit() Command {
+	return NewNamedCommand("git", g.WorkDir)
 }
 
 // IsCommitExists takes a git commit hash and returns true if it's found, false otherwise.
 // It returns error if something goes wrong while checking.
 func (g *Git) IsCommitExists(hash string) (bool, error) {
-	out, err := (&command{Name: "git", WorkDir: g.WorkDir}).Execute("show", "-s", "--format=%H", hash)
-	return strings.Compare(hash, out) == 0, err
+	var out string
+	var err error
+
+	if out, err = g.withGit().Execute("show", "-s", "--format=%H", hash); err != nil {
+		if !strings.HasPrefix(err.Error(), "exit status 128 :: fatal: bad object") {
+			return false, err
+		}
+	}
+
+	return strings.Compare(hash, out) == 0 && len(hash) > 0, nil
 }
 
 // Checkout checks out the specified git commit hash, it returns error if it fails.
 func (g *Git) Checkout(hash string) error {
-	_, err := (&command{Name: "git", WorkDir: g.WorkDir}).Execute("checkout", fmt.Sprintf("%v", hash))
+	_, err := g.withGit().Execute("checkout", fmt.Sprintf("%v", hash))
 	return err
 }
 
@@ -45,7 +59,7 @@ func (g *Git) Checkout(hash string) error {
 func (g *Git) Status() (string, error) {
 	var out string
 	var err error
-	if out, err = (&command{Name: "git", WorkDir: g.WorkDir}).Execute("status", "-s", "-uall"); err != nil {
+	if out, err = g.withGit().Execute("status", "-s", "-uall"); err != nil {
 		return "", err
 	}
 	return out, nil
@@ -55,7 +69,7 @@ func (g *Git) Status() (string, error) {
 func (g *Git) GetTagCommit(tag string) (string, error) {
 	var out string
 	var err error
-	if out, err = (&command{Name: "git", WorkDir: g.WorkDir}).Execute("for-each-ref",
+	if out, err = g.withGit().Execute("for-each-ref",
 		fmt.Sprintf("refs/tags/%v", tag), "--format='%(objectname)'"); err != nil {
 		return "", err
 	} else if len(strings.Trim(out, "'")) == 0 {
@@ -68,7 +82,7 @@ func (g *Git) GetTagCommit(tag string) (string, error) {
 func (g *Git) GetBranchCommit(branch string) (string, error) {
 	var out string
 	var err error
-	if out, err = (&command{Name: "git", WorkDir: g.WorkDir}).Execute("for-each-ref",
+	if out, err = g.withGit().Execute("for-each-ref",
 		fmt.Sprintf("refs/heads/%v", branch), "--format='%(objectname)'"); err != nil {
 		return "", err
 	} else if len(strings.Trim(out, "'")) == 0 {

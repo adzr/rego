@@ -18,9 +18,12 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/adzr/errs"
 )
 
 // Command represents a shell command.
@@ -30,35 +33,14 @@ type Command interface {
 	Execute(args ...string) (string, error)
 }
 
-// command is a default Command implementation that gets executed
-// against a certain working directory.
-type command struct {
-	// Name is the command name.
-	Name string
-	// WorkDir is the directory path meant to executed the command against.
-	WorkDir string
+type namedCommand struct {
+	name    string
+	workDir string
 }
 
-// NestedError is a recursive structure meant to store the error stack.
-type NestedError struct {
-	Message string
-	Cause   *NestedError
-}
-
-// Error displays the error stack stored in the NestedError structure.
-func (e *NestedError) Error() string {
-	if e.Cause != nil {
-		if message := e.Cause.Error(); len(message) > 0 {
-			return fmt.Sprintf("%v%v\tCaused by: %v", e.Message, NewLine(), message)
-		}
-	}
-
-	return e.Message
-}
-
-func (comm *command) Execute(args ...string) (string, error) {
-	c := exec.Command(comm.Name, args...)
-	c.Dir = comm.WorkDir
+func (comm *namedCommand) Execute(args ...string) (string, error) {
+	c := exec.Command(comm.name, args...)
+	c.Dir = comm.workDir
 
 	var out string
 	var err error
@@ -67,12 +49,17 @@ func (comm *command) Execute(args ...string) (string, error) {
 
 	if output, e := c.Output(); e != nil {
 		out, err = strings.TrimSpace(string(output)),
-			&NestedError{Message: e.Error(), Cause: &NestedError{Message: strings.TrimSpace(string(stderr.Bytes()))}}
+			errs.New(e.Error(), errors.New(strings.TrimSpace(string(stderr.Bytes()))))
 	} else {
 		out, err = strings.TrimSpace(string(output)), nil
 	}
 
 	return out, err
+}
+
+// NewNamedCommand return an instance of Command.
+func NewNamedCommand(name, workDir string) Command {
+	return &namedCommand{name: name, workDir: workDir}
 }
 
 // NewLine returns the new line character within a string.

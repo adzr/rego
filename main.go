@@ -18,9 +18,10 @@ package main
 
 import (
 	"fmt"
-	getopt "github.com/kesselborn/go-getopt"
 	"os"
 	"strings"
+
+	getopt "github.com/kesselborn/go-getopt"
 )
 
 // GitCommit is the git commit hash string,
@@ -34,6 +35,10 @@ var BuildTimestamp string
 // ReleaseVersion is the desired release version string that represents the version of this executable.
 // gets passed from the command line using a binary release of this tool.
 var ReleaseVersion string
+
+// GoVersion indicates which version of Go has been used to build this binary.
+// gets passed from the command line using a binary release of this tool.
+var GoVersion string
 
 type configurations struct {
 	WorkDir         string
@@ -168,7 +173,7 @@ func generateRelease(conf *configurations) string {
 }
 
 func release(commit, releaseVersion, pkg, workDir string, verbose bool) error {
-	goTools := &GoTools{workDir: workDir, verbose: verbose}
+	goTools := &GoTools{WorkDir: workDir, Verbose: verbose}
 
 	if err := goTools.Clean(); err != nil {
 		return err
@@ -198,11 +203,12 @@ func reportInput(conf *configurations) string {
 		conf.Package, NewLine())
 }
 
-func printVersion() string {
-	return fmt.Sprintf("Go Release %v%vCommit: %v%vBuild Time: %v%v",
+func printVersion() (string, error) {
+	return fmt.Sprintf("Release: %v%vCommit: %v%vBuild Time: %v%vBuilt with: %v%v",
 		ReleaseVersion, NewLine(),
 		GitCommit, NewLine(),
-		BuildTimestamp, NewLine())
+		BuildTimestamp, NewLine(),
+		GoVersion, NewLine()), nil
 }
 
 func assertGitStatus(conf *configurations) error {

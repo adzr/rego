@@ -18,21 +18,28 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 )
 
 // GoTools wraps some Golang commands with some additional flags for quick use.
 type GoTools struct {
-	workDir string
-	verbose bool
+	// WorkDir is the working directory where the command is being executed.
+	WorkDir string
+	// Verbose shows more verbose output while execution.
+	Verbose bool
 }
 
-// Clean invokes: 'go clean -i ./...'
+func (g *GoTools) withGo() Command {
+	return NewNamedCommand(runtime.GOROOT()+"/bin/go", g.WorkDir)
+}
+
+// Clean invokes: 'go clean -i ./...'.
 // See 'go clean --help'
 func (g *GoTools) Clean() error {
 
-	if _, err := (&command{Name: "go", WorkDir: g.workDir}).Execute("clean", "-i", "./..."); err != nil {
+	if _, err := g.withGo().Execute("clean", "-i", "./..."); err != nil {
 		return err
 	}
 
@@ -43,17 +50,23 @@ func (g *GoTools) Clean() error {
 // See 'go install --help'
 func (g *GoTools) Install(commit, releaseVersion, pkg string) error {
 
+	var err error
+	var goVersion string
+
 	now := time.Now().UTC()
+
+	goVersion, _ = g.withGo().Execute("version")
 
 	vars := []string{
 		"-X", fmt.Sprintf("\"%v.GitCommit=%v\"", pkg, commit),
 		"-X", fmt.Sprintf("\"%v.BuildTimestamp=%v\"", pkg, now.Format(time.RFC3339)),
 		"-X", fmt.Sprintf("\"%v.ReleaseVersion=%v\"", pkg, releaseVersion),
+		"-X", fmt.Sprintf("\"%v.GoVersion=%v\"", pkg, goVersion),
 	}
 
 	args := []string{"install", "-ldflags", strings.Join(vars, " ")}
 
-	if _, err := (&command{Name: "go", WorkDir: g.workDir}).Execute(args...); err != nil {
+	if _, err = NewNamedCommand("go", g.WorkDir).Execute(args...); err != nil {
 		return err
 	}
 
