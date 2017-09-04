@@ -18,12 +18,11 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 
-	"github.com/adzr/errs"
+	"github.com/pkg/errors"
 )
 
 // Command represents a shell command.
@@ -49,7 +48,7 @@ func (comm *namedCommand) Execute(args ...string) (string, error) {
 
 	if output, e := c.Output(); e != nil {
 		out, err = strings.TrimSpace(string(output)),
-			errs.New(e.Error(), errors.New(strings.TrimSpace(string(stderr.Bytes()))))
+			errors.Wrap(errors.New(strings.TrimSpace(string(stderr.Bytes()))), e.Error())
 	} else {
 		out, err = strings.TrimSpace(string(output)), nil
 	}

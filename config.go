@@ -117,7 +117,7 @@ func configure(conf *configurations) (string, error) {
 	var options map[string]getopt.OptionValue
 
 	if options, _, _, err = parser.ParseCommandLine(); err != nil {
-		return "", fmt.Errorf("Failed with error code: %v, %v", err.ErrorCode, err.Error())
+		return "", fmt.Errorf("failed with error code: %v, %v", err.ErrorCode, err.Error())
 	} else if help, wantsHelp := options["help"]; wantsHelp && help.String == "usage" {
 		return parser.Usage(), nil
 	} else if wantsHelp && help.String == "help" {

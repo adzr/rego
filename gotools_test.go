@@ -170,7 +170,8 @@ func (suite *GoToolsTestSuite) TestGoTools_Install_Failure() {
 		return
 	}
 
+	dir := suite.goTools.WorkDir
 	suite.goTools.WorkDir = "/some-nonexistent-path/"
-
 	assert.NotNil(suite.T(), suite.goTools.Install(commit, "1.0", "main"))
+	suite.goTools.WorkDir = dir
 }

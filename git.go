@@ -40,7 +40,7 @@ func (g *Git) IsCommitExists(hash string) (bool, error) {
 	var err error
 
 	if out, err = g.withGit().Execute("show", "-s", "--format=%H", hash); err != nil {
-		if !strings.HasPrefix(err.Error(), "exit status 128 :: fatal: bad object") {
+		if !strings.HasPrefix(err.Error(), "exit status 128: fatal: bad object") {
 			return false, err
 		}
 	}

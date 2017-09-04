@@ -1,6 +1,6 @@
-#REGO
+#rego
 
-Rego (release-go) is a command line tool to help building [Golang](https://golang.org) code committed under a [Git](https://git-scm.com/) repository into binaries with release information.
+Rego (release-go) is a command line tool to help building [Golang](https://golang.org) code committed under a [Git](https://git-scm.com/) repository into binaries with embedded release information.
 
 [![Build Status](https://travis-ci.org/adzr/rego.svg?branch=master)](https://travis-ci.org/adzr/rego) [![Coverage Status](https://coveralls.io/repos/github/adzr/rego/badge.svg?branch=master)](https://coveralls.io/github/adzr/rego?branch=master)
 
@@ -11,7 +11,9 @@ Simply, instead of running `go install`, `rego` can be executed against the desi
 
 ##Installation
 
-```go get -u github.com/adzr/rego```
+```bash
+go get -u github.com/adzr/rego
+```
 
 ##Usage
 
@@ -40,7 +42,7 @@ For detailed help type ```rego --help```
 Example
 ------
 Create a new Golang project named ```example-go```, initialize a new git repository and add a ```main.go``` file
-```shell
+```bash
 cd $GOPATH/src/ \
 && mkdir example-go \
 && cd example-go \
@@ -67,49 +69,49 @@ func main() {
 
 ```
 Now in the command line type
-```
+```bash
 rego -w $GOPATH/src/example-go
 ```
-Let's check the output
+Output
 ```
 Uncommitted/untracked files:
  ?? main.go
 ```
 Oops, looks like we missed something, it appears that we haven't committed all our files, let's commit them and try again
-```
+```bash
 cd $GOPATH/src/example-go \
 && git add . \
 && git commit -m 'Initial commit' \
-&& rego
+&& rego -r 1.0
 ```
-Did we succeed?
+Have we succeeded?
 ```
 branch 'develop' is not found
 ```
-Aaa..nope, it seems that ```rego``` is trying by default to pull from a branch called ```develop```, and that's because it tries to follow [GitFlow](https://datasift.github.io/gitflow/IntroducingGitFlow.html) branching model, and releasing from ```develop``` branch is what you will mostly be doing before merging to the master, so let's be more specific here
-```
-rego -b master -w $GOPATH/src/example-go
+Aaa..nope, it seems that ```rego``` is trying by default to pull from a branch named ```develop```, and that's because it tries to follow [GitFlow](https://datasift.github.io/gitflow/IntroducingGitFlow.html) branching model, releasing from ```develop``` branch is what you will mostly be doing before merging to the master, but our tiny example project has only a ```master``` branch so let's be more specific here
+```bash
+rego -r 1.0 -b master -w $GOPATH/src/example-go
 ```
 And here is what we get back
 ```
 commit '03c7ac7ddd8563cf513a5925c85193c405d66c12' is checked out, don't forget to switch back to your working reference
 ```
-It seems it has found the most recent commit in our selected branch and checked it out to build it, also it notifies us not to forget to check out our previous branch back again to we don't commit to an unreferenced branch, so let's checkout the ```master``` branch again.
-```
+It seems that it picked the most recent commit in our selected branch and checked it out for releasing, it also notifies us not to forget to check out our previous branch back again so we don't continue working/committing to an unreferenced branch, so let's checkout the ```master``` branch again.
+```bash
 git checkout master
 ```
-Ok, now we're back on master, but what's happened with our ```example-go``` binary that we were trying to build? let's check out
-```
+Ok, now we're back on master, but what's happened with our ```example-go``` binary that we were trying to build? let's check out by running it
+```bash
 $GOPATH/bin/example-go
 ```
 Output
 ```
-Release: SNAPSHOT
+Release: 1.0
 Commit: 134492f9327867b715fdc552993305179b7bc23f
-Build Time: 2017-09-04T18:26:12Z
+Build Time: 2017-09-04T19:07:57Z
 Built with: go version go1.9 linux/amd64
 ```
-Finally, we can see our code is built with the correct release information, you can try to play more with the command options to see different output, e.g like a different release version (which defaults to SNAPSHOT) or try to tag your commit and pass the tag name as an option to the command, so refer back to the help page by typing ```rego --help```.
+Finally, we can see our code is built and embedding the correct release information, so now you can try to play more with the command options to see different results, e.g like a different release version (which defaults to SNAPSHOT if not specified) or try to tag your commit and pass the tag name as an option to the command, so refer back to the help page for more information by typing ```rego --help```.
 
 ##License
 This project is licensed under [Apache License Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.txt)
