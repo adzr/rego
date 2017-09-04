@@ -53,81 +53,81 @@ type configurations struct {
 
 func configure(conf *configurations) (string, error) {
 
-	var err error
+	var e error
 	var workDirectory string
 
-	if workDirectory, err = os.Getwd(); err != nil {
-		return "", err
+	if workDirectory, e = os.Getwd(); e != nil {
+		return "", e
 	}
 
 	parser := getopt.Options{
-		Description: "Builds a release of a Golang source based on the current status of its git repository.",
+		Description: "Builds and installs a binary release of a Golang source code while embedding its release information - through a group of exported public variables in the source - based on the current status of its Git repository, all the source files must be committed into the local repository before running this command or it will complain.",
 		Definitions: []getopt.Option{
 			{
 				OptionDefinition: "work-directory|w|REGO_WORK_DIR",
-				Description:      "The working directory that contains the git repository.",
+				Description:      "The working directory that contains the project source files and its Git repository",
 				Flags:            getopt.Optional | getopt.ExampleIsDefault,
 				DefaultValue:     workDirectory,
 			}, {
 				OptionDefinition: "branch|b|REGO_BRANCH",
-				Description:      "The branch where the release is taken from.",
+				Description:      "The branch name of where the binary release source is going to be taken from, the command automatically picks the most recent commit hash in the specified branch, the commit hash string is passed to the binary release while building through the public variable 'GitCommit'",
 				Flags:            getopt.Optional | getopt.ExampleIsDefault,
 				DefaultValue:     "develop",
 			}, {
 				OptionDefinition: "commit|c|REGO_COMMIT",
-				Description:      "The commit hash of the snapshot, causes the branch option to be ignored.",
+				Description:      "The commit hash string of where the binary release source is going to be taken from, specifying this option causes the '--branch' option to be ignored since this option is more specific, the commit hash string is passed to the binary release while building through the public variable 'GitCommit'",
 				Flags:            getopt.Optional | getopt.ExampleIsDefault,
 				DefaultValue:     "",
 			}, {
 				OptionDefinition: "tag|t|REGO_TAG",
-				Description:      "The tag of the final release, causes the branch and commit options to be ignored.",
+				Description:      "The tag name of where the binary release source is going to be taken from, causes the '--branch' and '--commit' options to be ignored since this option is more specific, the commit hash string is passed to the binary release while building through the public variable 'GitCommit'",
 				Flags:            getopt.Optional | getopt.ExampleIsDefault,
 				DefaultValue:     "",
 			}, {
 				OptionDefinition: "release|r|REGO_RELEASE",
-				Description:      "The release version, defaults to the most recent tag or to the tag option if specified.",
+				Description:      "The string that is meant to represent the final binary release version, if the '--tag' option is specified this option is automatically calculated with consideration of '--ignore-tag-prefix' option if specified to represent the tag name, the value of this option is passed to the binary release while building through the public variable 'ReleaseVersion'",
 				Flags:            getopt.Optional | getopt.ExampleIsDefault,
 				DefaultValue:     "SNAPSHOT",
 			}, {
 				OptionDefinition: "package|p|REGO_PACKAGE",
-				Description: "The package name of which contains the definitions of the public variables" +
-					" (GitCommit, BuildTimestamp, ReleaseVersion).",
+				Description: "The package name of which contains the declarations of the public variables" +
+					" (GitCommit, BuildTimestamp, ReleaseVersion, GoVersion) which represent the commit hash of where the binary release source has been pulled from, the timestamp of when the build has be triggered, the release version string, the Golang version that has been used in the build, respectively",
 				Flags:        getopt.Optional | getopt.ExampleIsDefault,
 				DefaultValue: "main",
 			}, {
 				OptionDefinition: "ignore-tag-prefix|i|REGO_IGNORE_TAG_PREFIX",
-				Description: "Ignores the specified version/tag prefix when reading from the repository" +
-					" to write it without prefix in the binary.",
-				Flags:        getopt.Optional | getopt.ExampleIsDefault,
-				DefaultValue: "",
+				Description:      "If the '--tag' option is specified, this option trims the specified prefix off the tag name while calculating the release version string",
+				Flags:            getopt.Optional | getopt.ExampleIsDefault,
+				DefaultValue:     "",
 			}, {
 				OptionDefinition: "verbose",
-				Description:      "Shows more verbose output.",
+				Description:      "Shows more verbose output",
 				Flags:            getopt.Flag,
 				DefaultValue:     false,
 			}, {
 				OptionDefinition: "version|v",
-				Description:      "Prints the version and exits.",
+				Description:      "Prints the version and exits",
 				Flags:            getopt.Flag,
 				DefaultValue:     false,
 			},
 		},
 	}
 
+	var err *getopt.GetOptError
 	var options map[string]getopt.OptionValue
 
 	if options, _, _, err = parser.ParseCommandLine(); err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed with error code: %v, %v", err.ErrorCode, err.Error())
 	} else if help, wantsHelp := options["help"]; wantsHelp && help.String == "usage" {
 		return parser.Usage(), nil
 	} else if wantsHelp && help.String == "help" {
 		return parser.Help(), nil
 	} else if options["version"].Bool {
-		return fmt.Sprintf("Release: %v%vCommit: %v%vBuild Time: %v%vBuilt with: %v%v",
+		return fmt.Sprintf("Release: %v%vCommit: %v%vBuild Time: %v%vBuilt with: %v",
 			ReleaseVersion, NewLine(),
 			GitCommit, NewLine(),
 			BuildTimestamp, NewLine(),
-			GoVersion, NewLine()), nil
+			GoVersion), nil
 	}
 
 	conf.Verbose = options["verbose"].Bool

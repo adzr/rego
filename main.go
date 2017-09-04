@@ -20,54 +20,43 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	getopt "github.com/kesselborn/go-getopt"
 )
 
 const (
 	executionErrorCode = 126
 )
 
-func fail(code int, message string, args ...string) {
-	fmt.Fprintf(os.Stderr, "%v"+NewLine(), message, args)
+func fail(code int, format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format+NewLine(), args...)
 	os.Exit(code)
 }
 
-func print(format string, args ...string) {
-	fmt.Fprintf(os.Stdout, format+NewLine(), args)
+func print(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stdout, format+NewLine(), args...)
 }
 
-func exit(format string, args ...string) {
+func exit(format string, args ...interface{}) {
 	print(format, args...)
 	os.Exit(0)
 }
 
-func release(conf *configurations) {
-
-	if conf.Verbose {
-		print("generating release: %v", conf.Release)
-	}
-
-	var err error
-
-	g := &Git{WorkDir: conf.WorkDir, Verbose: conf.Verbose}
-
-	if err = g.Checkout(conf.Commit); err != nil {
+func read(conf *configurations) {
+	if out, err := configure(conf); err != nil {
 		fail(executionErrorCode, err.Error())
-	} else {
-		print("commit '%v' is checked out, don't forget to switch back to your working reference", conf.Commit)
+	} else if len(out) > 0 {
+		exit(out)
 	}
 
 	if conf.Verbose {
-		print("building from commit '%v'", conf.Commit)
-	}
-
-	gt := &GoTools{WorkDir: conf.WorkDir, Verbose: conf.Verbose}
-
-	if err = gt.Clean(); err != nil {
-		fail(executionErrorCode, err.Error())
-	} else if err = gt.Install(conf.Commit, conf.Release, conf.Package); err != nil {
-		fail(executionErrorCode, err.Error())
+		print(`
+Branch: %v
+Commit hash: %v
+Tag: %v
+Working directory: %v
+Release version: %v
+Ignore tag prefix: %v
+Package: %v"
+`, conf.Branch, conf.Commit, conf.Tag, conf.WorkDir, conf.Release, conf.IgnoreTagPrefix, conf.Package)
 	}
 }
 
@@ -82,7 +71,7 @@ func validate(conf *configurations) {
 	}
 
 	if len(status) > 0 {
-		fail(executionErrorCode, "Uncommitted/untracked files:%v", status)
+		fail(executionErrorCode, "Uncommitted/untracked files:%v %v", NewLine(), status)
 	}
 
 	if len(conf.Tag) > 0 {
@@ -122,27 +111,32 @@ func validate(conf *configurations) {
 	}
 }
 
-func read(conf *configurations) {
-	if out, err := configure(conf); err != nil {
-		if e, ok := err.(*getopt.GetOptError); ok {
-			fail(e.ErrorCode, e.Error())
-		} else {
-			fail(executionErrorCode, err.Error())
-		}
-	} else if len(out) > 0 {
-		exit(out)
+func release(conf *configurations) {
+
+	if conf.Verbose {
+		print("generating release: %v", conf.Release)
+	}
+
+	var err error
+
+	g := &Git{WorkDir: conf.WorkDir, Verbose: conf.Verbose}
+
+	if err = g.Checkout(conf.Commit); err != nil {
+		fail(executionErrorCode, err.Error())
+	} else {
+		print("commit '%v' is checked out, don't forget to switch back to your working reference", conf.Commit)
 	}
 
 	if conf.Verbose {
-		print(`
-Branch: %v
-Commit hash: %v
-Tag: %v
-Working directory: %v
-Release version: %v
-Ignore tag prefix: %v
-Package: %v"
-`, conf.Branch, conf.Commit, conf.Tag, conf.WorkDir, conf.Release, conf.IgnoreTagPrefix, conf.Package)
+		print("building from commit '%v'", conf.Commit)
+	}
+
+	gt := &GoTools{WorkDir: conf.WorkDir, Verbose: conf.Verbose}
+
+	if err = gt.Clean(); err != nil {
+		fail(executionErrorCode, err.Error())
+	} else if err = gt.Install(conf.Commit, conf.Release, conf.Package); err != nil {
+		fail(executionErrorCode, err.Error())
 	}
 }
 

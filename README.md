@@ -30,3 +30,24 @@ var ReleaseVersion string
 var GoVersion string
 
 ```
+
+Command usage can be as follows:
+
+```
+Usage: rego [-w <work-directory>] [-b <branch>] [-c <commit>] [-t <tag>] [-r <release>] [-p <package>] [-i <ignore-tag-prefix>] --verbose -v
+
+Builds a release of a Golang source based on the current status of its git repository.
+
+Options:
+    -w, --work-directory=<work-directory>         The working directory that contains the git repository (default: /home/adzr/Documents/code/golang/src/github.com/adzr/rego); setable via $REGO_WORK_DIR
+    -b, --branch=<branch>                         The branch where the release is taken from (default: develop); setable via $REGO_BRANCH
+    -c, --commit=<commit>                         The commit hash of the snapshot, causes the branch option to be ignored; setable via $REGO_COMMIT
+    -t, --tag=<tag>                               The tag of the final release, causes the branch and commit options to be ignored; setable via $REGO_TAG
+    -r, --release=<release>                       The release version, defaults to the most recent tag or to the tag option if specified (default: SNAPSHOT); setable via $REGO_RELEASE
+    -p, --package=<package>                       The package name of which contains the definitions of the public variables (GitCommit, BuildTimestamp, ReleaseVersion) (default: main); setable via $REGO_PACKAGE
+    -i, --ignore-tag-prefix=<ignore-tag-prefix>   Ignores the specified version/tag prefix when reading from the repository to write it without prefix in the binary; setable via $REGO_IGNORE_TAG_PREFIX
+        --verbose                                 Shows more verbose output
+    -v, --version                                 Prints the version and exits
+    -h, --help                                    usage (-h) / detailed help text (--help)
+
+```
