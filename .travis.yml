@@ -1,0 +1,15 @@
+sudo: required
+
+language: go
+
+go:
+  - master
+
+before_install:
+  - go get github.com/mattn/goveralls
+  - sudo apt-get -qq update
+  - sudo apt-get install -y git
+  - cd $TRAVIS_BUILD_DIR
+
+script:
+  - $HOME/gopath/bin/goveralls -service=travis-ci
