@@ -11,6 +11,7 @@ Brief
 Simply, instead of running `go install`, `rego` can be executed against the desired a project directory, and it will feed the output binary with the release information specified in the command arguments.
 
 Only as a prerequisite the developer has to define the following public variables in his project main package:
+
 ```golang
 // GitCommit is the git commit hash string,
 // gets passed from the command line using a binary release of this tool.

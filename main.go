@@ -24,283 +24,135 @@ import (
 	getopt "github.com/kesselborn/go-getopt"
 )
 
-// GitCommit is the git commit hash string,
-// gets passed from the command line using a binary release of this tool.
-var GitCommit string
+const (
+	executionErrorCode = 126
+)
 
-// BuildTimestamp is the current timestamp in a string format,
-// gets passed from the command line using a binary release of this tool.
-var BuildTimestamp string
-
-// ReleaseVersion is the desired release version string that represents the version of this executable.
-// gets passed from the command line using a binary release of this tool.
-var ReleaseVersion string
-
-// GoVersion indicates which version of Go has been used to build this binary.
-// gets passed from the command line using a binary release of this tool.
-var GoVersion string
-
-type configurations struct {
-	WorkDir         string
-	Tag             string
-	Release         string
-	IgnoreTagPrefix string
-	Package         string
-	Commit          string
-	Branch          string
-	Verbose         bool
-	Version         bool
+func fail(code int, message string, args ...string) {
+	fmt.Fprintf(os.Stderr, "%v"+NewLine(), message, args)
+	os.Exit(code)
 }
 
-func configure(conf *configurations) {
+func print(format string, args ...string) {
+	fmt.Fprintf(os.Stdout, format+NewLine(), args)
+}
 
-	workDirectory := ""
+func exit(format string, args ...string) {
+	print(format, args...)
+	os.Exit(0)
+}
 
-	if wd, err := os.Getwd(); err != nil {
-		fmt.Print(err.Error())
-		os.Exit(1)
+func release(conf *configurations) {
+
+	if conf.Verbose {
+		print("generating release: %v", conf.Release)
+	}
+
+	var err error
+
+	g := &Git{WorkDir: conf.WorkDir, Verbose: conf.Verbose}
+
+	if err = g.Checkout(conf.Commit); err != nil {
+		fail(executionErrorCode, err.Error())
 	} else {
-		workDirectory = wd
+		print("commit '%v' is checked out, don't forget to switch back to your working reference", conf.Commit)
 	}
 
-	parser := getopt.Options{
-		Description: "Builds a release of a Golang source based on the current status of its git repository.",
-		Definitions: []getopt.Option{
-			{
-				OptionDefinition: "work-directory|w|REGO_WORK_DIR",
-				Description:      "The working directory that contains the git repository",
-				Flags:            getopt.Optional | getopt.ExampleIsDefault,
-				DefaultValue:     workDirectory,
-			}, {
-				OptionDefinition: "branch|b|REGO_BRANCH",
-				Description:      "The branch where the release be taken from",
-				Flags:            getopt.Optional | getopt.ExampleIsDefault,
-				DefaultValue:     "develop",
-			}, {
-				OptionDefinition: "commit|c|REGO_COMMIT",
-				Description:      "The commit hash of the snapshot, overrides the branch option",
-				Flags:            getopt.Optional | getopt.ExampleIsDefault,
-				DefaultValue:     "",
-			}, {
-				OptionDefinition: "tag|t|REGO_TAG",
-				Description:      "The tag of the final release, overrides the branch and commit options",
-				Flags:            getopt.Optional | getopt.ExampleIsDefault,
-				DefaultValue:     "",
-			}, {
-				OptionDefinition: "release|r|REGO_RELEASE",
-				Description:      "The release version, defaults to the most recent tag",
-				Flags:            getopt.Optional | getopt.ExampleIsDefault,
-				DefaultValue:     "",
-			}, {
-				OptionDefinition: "package|p|REGO_PACKAGE",
-				Description: "The package name of which contains the definitions of the public variables" +
-					" (GitCommit, BuildTimestamp, ReleaseVersion)",
-				Flags:        getopt.Optional | getopt.ExampleIsDefault,
-				DefaultValue: "main",
-			}, {
-				OptionDefinition: "ignore-tag-prefix|i|REGO_IGNORE_TAG_PREFIX",
-				Description: "Ignores the specified version/tag prefix when reading from the repository" +
-					" to write it without prefix in the binary",
-				Flags:        getopt.Optional | getopt.ExampleIsDefault,
-				DefaultValue: "",
-			}, {
-				OptionDefinition: "verbose",
-				Description:      "Shows more verbose output",
-				Flags:            getopt.Flag,
-				DefaultValue:     false,
-			}, {
-				OptionDefinition: "version|v",
-				Description:      "Prints the version and exits",
-				Flags:            getopt.Flag,
-				DefaultValue:     false,
-			},
-		},
+	if conf.Verbose {
+		print("building from commit '%v'", conf.Commit)
 	}
 
-	if options, _, _, err := parser.ParseCommandLine(); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(err.ErrorCode)
-	} else if help, wantsHelp := options["help"]; wantsHelp && help.String == "usage" {
-		fmt.Print(parser.Usage())
-		os.Exit(0)
-	} else if wantsHelp && help.String == "help" {
-		fmt.Print(parser.Help())
-		os.Exit(0)
-	} else {
-		conf.WorkDir = options["work-directory"].String
-		conf.Branch = options["branch"].String
-		conf.Commit = options["commit"].String
-		conf.Tag = options["tag"].String
-		conf.Release = options["release"].String
-		conf.Package = options["package"].String
-		conf.IgnoreTagPrefix = options["ignore-tag-prefix"].String
-		conf.Verbose = options["verbose"].Bool
-		conf.Version = options["version"].Bool
+	gt := &GoTools{WorkDir: conf.WorkDir, Verbose: conf.Verbose}
+
+	if err = gt.Clean(); err != nil {
+		fail(executionErrorCode, err.Error())
+	} else if err = gt.Install(conf.Commit, conf.Release, conf.Package); err != nil {
+		fail(executionErrorCode, err.Error())
 	}
 }
 
-func fail(message string) {
-	println(message)
-	os.Exit(1)
-}
-
-func useTag(conf *configurations) bool {
-	return len(conf.Tag) > 0
-}
-
-func useCommit(conf *configurations) bool {
-	return len(conf.Commit) > 0
-}
-
-func useRelease(conf *configurations) bool {
-	return len(conf.Release) > 0
-}
-
-func generateRelease(conf *configurations) string {
-	if useTag(conf) {
-		if useRelease(conf) {
-			return conf.Release
-		}
-
-		return strings.TrimPrefix(conf.Release, conf.IgnoreTagPrefix)
-	}
-
-	if useRelease(conf) {
-		return conf.Release
-	}
-
-	return "SNAPSHOT"
-}
-
-func release(commit, releaseVersion, pkg, workDir string, verbose bool) error {
-	goTools := &GoTools{WorkDir: workDir, Verbose: verbose}
-
-	if err := goTools.Clean(); err != nil {
-		return err
-	} else if err := goTools.Install(commit, releaseVersion, pkg); err != nil {
-		return err
-	} else {
-		return nil
-	}
-}
-
-func reportInput(conf *configurations) string {
-	var target string
-
-	if useTag(conf) {
-		target = fmt.Sprintf("Tag: %v", conf.Tag)
-	} else if useCommit(conf) {
-		target = fmt.Sprintf("Commit: %v", conf.Commit)
-	} else {
-		target = fmt.Sprintf("Branch: %v", conf.Branch)
-	}
-
-	return fmt.Sprintf("Working directory: %v%vTarget: %v%vRelease Version: %v%vIgnore tag prefix: %v%vPackage: %v%v",
-		conf.WorkDir, NewLine(),
-		target, NewLine(),
-		conf.Release, NewLine(),
-		conf.IgnoreTagPrefix, NewLine(),
-		conf.Package, NewLine())
-}
-
-func printVersion() (string, error) {
-	return fmt.Sprintf("Release: %v%vCommit: %v%vBuild Time: %v%vBuilt with: %v%v",
-		ReleaseVersion, NewLine(),
-		GitCommit, NewLine(),
-		BuildTimestamp, NewLine(),
-		GoVersion, NewLine()), nil
-}
-
-func assertGitStatus(conf *configurations) error {
+func validate(conf *configurations) {
 	g := &Git{WorkDir: conf.WorkDir, Verbose: conf.Verbose}
 
 	var status string
 	var err error
 
 	if status, err = g.Status(); err != nil {
-		return err
+		fail(executionErrorCode, err.Error())
 	}
 
 	if len(status) > 0 {
-		return fmt.Errorf("Uncommitted/untracked files:%v%v", NewLine(), status)
+		fail(executionErrorCode, "Uncommitted/untracked files:%v", status)
 	}
 
-	return nil
+	if len(conf.Tag) > 0 {
+		if conf.Verbose {
+			print("requested tag: %v", conf.Tag)
+		}
+
+		if conf.Commit, err = g.GetTagCommit(conf.Tag); err != nil {
+			fail(executionErrorCode, err.Error())
+		}
+
+		conf.Release = strings.TrimPrefix(conf.Tag, conf.IgnoreTagPrefix)
+	} else if len(conf.Commit) > 0 {
+		if conf.Verbose {
+			print("requested commit: %v", conf.Commit)
+		}
+
+		var exists bool
+
+		if exists, err = g.IsCommitExists(conf.Commit); err != nil {
+			fail(executionErrorCode, err.Error())
+		} else if !exists {
+			fail(executionErrorCode, "invalid commit specified")
+		}
+	} else {
+		if conf.Commit, err = g.GetBranchCommit(conf.Branch); err != nil {
+			fail(executionErrorCode, err.Error())
+		}
+
+		if conf.Verbose {
+			print("requested branch '%v' commit: %v", conf.Branch, conf.Commit)
+		}
+	}
+
+	if conf.Verbose {
+		print("target commit: %v", conf.Commit)
+	}
+}
+
+func read(conf *configurations) {
+	if out, err := configure(conf); err != nil {
+		if e, ok := err.(*getopt.GetOptError); ok {
+			fail(e.ErrorCode, e.Error())
+		} else {
+			fail(executionErrorCode, err.Error())
+		}
+	} else if len(out) > 0 {
+		exit(out)
+	}
+
+	if conf.Verbose {
+		print(`
+Branch: %v
+Commit hash: %v
+Tag: %v
+Working directory: %v
+Release version: %v
+Ignore tag prefix: %v
+Package: %v"
+`, conf.Branch, conf.Commit, conf.Tag, conf.WorkDir, conf.Release, conf.IgnoreTagPrefix, conf.Package)
+	}
 }
 
 func main() {
 
 	var conf configurations
 
-	configure(&conf)
+	read(&conf)
 
-	if conf.Version {
-		fmt.Print(printVersion())
-		os.Exit(0)
-	} else if conf.Verbose {
-		fmt.Println(reportInput(&conf))
-	}
+	validate(&conf)
 
-	if err := assertGitStatus(&conf); err != nil {
-		fail(err.Error())
-	}
-
-	var commit, rls string
-	var err error
-
-	g := &Git{WorkDir: conf.WorkDir, Verbose: conf.Verbose}
-
-	if useTag(&conf) {
-		if conf.Verbose {
-			fmt.Printf("Using tag: %v%v", conf.Tag, NewLine())
-		}
-
-		if commit, err = g.GetTagCommit(conf.Tag); err != nil {
-			fail(err.Error())
-		}
-	} else if useCommit(&conf) {
-		if conf.Verbose {
-			fmt.Printf("Using commit: %v%v", conf.Commit, NewLine())
-		}
-
-		if exists, err := g.IsCommitExists(conf.Commit); err != nil {
-			fail(err.Error())
-		} else if !exists {
-			fail("Invalid commit specified.")
-		} else {
-			commit = conf.Commit
-		}
-	} else if c, err := g.GetBranchCommit(conf.Branch); err != nil {
-		if conf.Verbose {
-			fmt.Printf("Using branch '%v' commit: %v%v", conf.Branch, conf.Commit, NewLine())
-		}
-
-		fail(err.Error())
-	} else {
-		if conf.Verbose {
-			fmt.Printf("Target commit: %v%v", conf.Commit, NewLine())
-		}
-
-		commit = c
-	}
-
-	if conf.Verbose {
-		fmt.Printf("Generating release: %v%v", conf.Release, NewLine())
-	}
-
-	rls = generateRelease(&conf)
-
-	if err := g.Checkout(commit); err != nil {
-		fail(err.Error())
-	} else {
-		fmt.Printf("Commit '%v' is checked out, don't forget to switch back to your working reference.%v", commit, NewLine())
-	}
-
-	if conf.Verbose {
-		fmt.Printf("Building from commit '%v'%v", commit, NewLine())
-	}
-
-	if err := release(commit, rls, conf.Package, conf.WorkDir, conf.Verbose); err != nil {
-		fail(err.Error())
-	}
+	release(&conf)
 }
