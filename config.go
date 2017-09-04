@@ -61,7 +61,7 @@ func configure(conf *configurations) (string, error) {
 	}
 
 	parser := getopt.Options{
-		Description: "Builds and installs a binary release of a Golang source code while embedding its release information - through a group of exported public variables in the source - based on the current status of its Git repository, all the source files must be committed into the local repository before running this command or it will complain.",
+		Description: "Builds and installs a binary release of a Golang source code while embedding its release information - through a group of exported public variables in the source - based on the current status of its Git repository, all the source files must be committed into the local repository before running this command or it will complain, this tool assumes that Golang (with a valid 'GOROOT' and 'GOPATH' environment variables) and Git source control are installed and fully working though shell.",
 		Definitions: []getopt.Option{
 			{
 				OptionDefinition: "work-directory|w|REGO_WORK_DIR",
