@@ -23,11 +23,9 @@ Simply, instead of running:
 
 	$ go install
 
-You can run the following against the desired project directory:
+You can run the following against the desired project directory, and it will feed the output binary with the release information specified in the command arguments:
 
 	$ rego
-
-Then it will feed the output binary with the release information specified in the command arguments.
 
 Installation
 
