@@ -27,11 +27,11 @@ You can run the following against the desired project directory, and it will fee
 
 	$ rego
 
-Installation
+Usage
+
+First, get the package:
 
 	$ go get -u github.com/adzr/rego
-
-Usage
 
 Only as a prerequisite the developer has to define the following public variables in his project main package:
 
