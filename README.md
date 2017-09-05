@@ -1,21 +1,21 @@
-#rego
+# rego
 
 Rego (release-go) is a command line tool to help building [Golang](https://golang.org) code committed under a [Git](https://git-scm.com/) repository into binaries with embedded release information.
 
 [![Build Status](https://travis-ci.org/adzr/rego.svg?branch=master)](https://travis-ci.org/adzr/rego) [![Coverage Status](https://coveralls.io/repos/github/adzr/rego/badge.svg?branch=master)](https://coveralls.io/github/adzr/rego?branch=master)
 
 
-##Brief
+## Brief
 
 Simply, instead of running `go install`, `rego` can be executed against the desired a project directory, and it will feed the output binary with the release information specified in the command arguments.
 
-##Installation
+## Installation
 
 ```bash
 go get -u github.com/adzr/rego
 ```
 
-##Usage
+## Usage
 
 Only as a prerequisite the developer has to define the following public variables in his project main package:
 
@@ -39,8 +39,7 @@ var GoVersion string
 ```
 For detailed help type ```rego --help```
 
-Example
-------
+## Example
 Create a new Golang project named ```example-go```, initialize a new git repository and add a ```main.go``` file
 ```bash
 cd $GOPATH/src/ \
@@ -113,5 +112,8 @@ Built with: go version go1.9 linux/amd64
 ```
 Finally, we can see our code is built and embedding the correct release information, so now you can try to play more with the command options to see different results, e.g like a different release version (which defaults to SNAPSHOT if not specified) or try to tag your commit and pass the tag name as an option to the command, so refer back to the help page for more information by typing ```rego --help```.
 
-##License
+## Contributing
+Pull requests and issue reports are welcomed.
+
+## License
 This project is licensed under [Apache License Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.txt)

@@ -65,6 +65,8 @@ func (suite *GoToolsTestSuite) SetupTest() {
 		return
 	}
 
+	suite.goTools = &GoTools{WorkDir: dir, Verbose: true}
+
 	if err = ioutil.WriteFile(dir+"/main.go", []byte(content), 0600); err != nil {
 		suite.Fail("failed to create 'main.go'", err.Error())
 		return
@@ -82,8 +84,6 @@ func (suite *GoToolsTestSuite) SetupTest() {
 	if _, err = git.Execute("commit", "-n", "-m", "'Initial commit'"); err != nil {
 		suite.Fail("failed to commit 'Initial commit' before test setup", err.Error())
 	}
-
-	suite.goTools = &GoTools{WorkDir: dir, Verbose: true}
 }
 
 func (suite *GoToolsTestSuite) TearDownTest() {
