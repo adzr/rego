@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"go/build"
 	"io/ioutil"
 	"os"
 	"runtime"
@@ -60,12 +59,10 @@ func (suite *GoToolsTestSuite) SetupTest() {
 	var dir string
 	var err error
 
-	if dir, err = ioutil.TempDir(build.Default.GOPATH+"/src/", "test-rego-go-"); err != nil {
+	if dir, err = ioutil.TempDir(os.Getenv("GOPATH")+"/src/", "test-rego-go-"); err != nil {
 		suite.Fail("failed to create temporary directory before test setup", err.Error())
 		return
 	}
-
-	println("TEMP DIR: " + dir)
 
 	suite.goTools = &GoTools{WorkDir: dir, Verbose: true}
 
