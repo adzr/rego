@@ -53,25 +53,29 @@ func main() {
 type GoToolsTestSuite struct {
 	suite.Suite
 	goTools *GoTools
+	goPath  string
 }
 
 func (suite *GoToolsTestSuite) SetupTest() {
-	var dir string
 	var err error
 
-	if dir, err = ioutil.TempDir(os.Getenv("GOPATH")+"/src/", "test-rego-go-"); err != nil {
+	if suite.goPath, err = ioutil.TempDir("/tmp/", "test-rego-go-"); err != nil {
 		suite.Fail("failed to create temporary directory before test setup", err.Error())
-		return
 	}
 
-	suite.goTools = &GoTools{WorkDir: dir, Verbose: true}
+	os.Setenv("GOPATH", suite.goPath)
 
-	if err = ioutil.WriteFile(dir+"/main.go", []byte(content), 0600); err != nil {
+	suite.goTools = &GoTools{WorkDir: suite.goPath + "/src/project", Verbose: true}
+
+	if err = os.MkdirAll(suite.goTools.WorkDir, os.ModePerm); err != nil {
+		suite.Fail("failed to create project source directory before test setup", err.Error())
+	}
+
+	if err = ioutil.WriteFile(suite.goTools.WorkDir+"/main.go", []byte(content), 0600); err != nil {
 		suite.Fail("failed to create 'main.go'", err.Error())
-		return
 	}
 
-	git := NewNamedCommand("git", dir)
+	git := NewNamedCommand("git", suite.goTools.WorkDir)
 
 	git.Execute("init")
 	git.Execute("config", "commit.gpgsign", "false")
@@ -86,13 +90,9 @@ func (suite *GoToolsTestSuite) SetupTest() {
 }
 
 func (suite *GoToolsTestSuite) TearDownTest() {
-	if suite.goTools != nil {
-		suite.goTools.Clean()
-
-		if len(suite.goTools.WorkDir) > 0 {
-			if err := os.RemoveAll(suite.goTools.WorkDir); err != nil {
-				suite.Fail("failed to remove temporary directory after test teardown", err.Error())
-			}
+	if len(suite.goPath) > 0 {
+		if err := os.RemoveAll(suite.goPath); err != nil {
+			suite.Fail("failed to remove temporary directory after test teardown", err.Error())
 		}
 	}
 }
@@ -132,24 +132,20 @@ func (suite *GoToolsTestSuite) TestGoTools_Install_Success() {
 
 	if commit, err = NewNamedCommand("git", suite.goTools.WorkDir).Execute("show", "-s", "--format=%H"); err != nil {
 		suite.Fail("failed to get last commit", err.Error())
-		return
 	}
 
 	if err = suite.goTools.Install(commit, "1.0", "main"); err != nil {
 		suite.Fail("failed to install binary", err.Error())
-		return
 	}
 
-	commandName := strings.Replace(suite.goTools.WorkDir, "/src/test-rego-go-", "/bin/test-rego-go-", 1)
+	commandName := strings.Replace(suite.goTools.WorkDir, "/src/project", "/bin/project", 1)
 
 	if out, err = NewNamedCommand(commandName, suite.goTools.WorkDir).Execute(); err != nil {
 		suite.Fail("failed to execute output binary", err.Error())
-		return
 	}
 
 	if goVersion, err = suite.goTools.withGo().Execute("version"); err != nil {
 		suite.Fail("failed to get go version", err.Error())
-		return
 	}
 
 	expected := fmt.Sprintf("Release: %v\nCommit: %v\nBuilt with: %v",
@@ -166,7 +162,6 @@ func (suite *GoToolsTestSuite) TestGoTools_Install_Failure() {
 
 	if commit, err = NewNamedCommand("git", suite.goTools.WorkDir).Execute("show", "-s", "--format=%H"); err != nil {
 		suite.Fail("failed to get last commit", err.Error())
-		return
 	}
 
 	dir := suite.goTools.WorkDir
