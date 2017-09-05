@@ -112,6 +112,9 @@ Built with: go version go1.9 linux/amd64
 ```
 Finally, we can see our code is built and embedding the correct release information, so now you can try to play more with the command options to see different results, e.g like a different release version (which defaults to SNAPSHOT if not specified) or try to tag your commit and pass the tag name as an option to the command, so refer back to the help page for more information by typing ```rego --help```.
 
+## Versioning
+This project release version format follows [Semantic Versioning](http://semver.org/).
+
 ## Contributing
 Pull requests and issue reports are welcomed.
 
