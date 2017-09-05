@@ -65,6 +65,8 @@ func (suite *GoToolsTestSuite) SetupTest() {
 		return
 	}
 
+	println("TEMP DIR: " + dir)
+
 	suite.goTools = &GoTools{WorkDir: dir, Verbose: true}
 
 	if err = ioutil.WriteFile(dir+"/main.go", []byte(content), 0600); err != nil {
